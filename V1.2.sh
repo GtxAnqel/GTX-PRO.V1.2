@@ -5,19 +5,93 @@ RED='\033[1;31m'
 GREEN='\033[1;32m'
 CYAN='\033[1;36m'
 YELLOW='\033[1;33m'
+MAGENTA='\033[1;35m'
 RESET='\033[0m'
+BOLD='\033[1m'
 
 # Banner fonksiyonu
 function banner() {
   clear
   figlet -c GTX-PRO.V1.2 | lolcat
-  echo -e "${CYAN}Termux Etik Hacker Aracı - GtxAnqel Tarafından${RESET}"
-  echo "----------------------------------------------"
+  echo -e "${CYAN}${BOLD}Termux Etik Hacker Aracı - GtxAnqel Tarafından${RESET}"
+  echo -e "${YELLOW}───────────────────────────────────────────────${RESET}"
+  echo ""
 }
 
 # Pause fonksiyonu
 function pause() {
-  read -p "Devam etmek için Enter'a bas..."
+  read -rp "Devam etmek için Enter'a bas..."
+}
+
+# IP bilgisi gösterme fonksiyonu (gelişmiş)
+function bilgi_goster() {
+  ip="$1"
+  echo -e "${YELLOW}[!] Bilgiler alınıyor... Lütfen bekleyin.${RESET}"
+
+  data=$(curl -s "http://ip-api.com/json/$ip?fields=status,country,regionName,city,district,zip,lat,lon,org,query,message,as,reverse")
+
+  status=$(echo "$data" | jq -r '.status')
+
+  if [[ "$status" != "success" ]]; then
+    message=$(echo "$data" | jq -r '.message')
+    echo -e "${RED}[!] Hata: $message${RESET}"
+    return
+  fi
+
+  country=$(echo "$data" | jq -r '.country')
+  region=$(echo "$data" | jq -r '.regionName')
+  city=$(echo "$data" | jq -r '.city')
+  district=$(echo "$data" | jq -r '.district')
+  zip=$(echo "$data" | jq -r '.zip')
+  lat=$(echo "$data" | jq -r '.lat')
+  lon=$(echo "$data" | jq -r '.lon')
+  org=$(echo "$data" | jq -r '.org')
+  query_ip=$(echo "$data" | jq -r '.query')
+  asn=$(echo "$data" | jq -r '.as')
+  reverse_dns=$(echo "$data" | jq -r '.reverse')
+
+  [[ "$district" == "null" ]] && district="Bilinmiyor"
+  [[ "$zip" == "null" ]] && zip="Bilinmiyor"
+  [[ "$reverse_dns" == "null" ]] && reverse_dns="Bilinmiyor"
+
+  # VPN kontrol (org ve ASN içinde VPN, Proxy, TOR vs kelimeleri var mı)
+  vpn_words=("VPN" "Proxy" "proxy" "vpn" "TOR" "tor" "Tor")
+  vpn_status="${GREEN}VPN kullanmıyorsunuz.${RESET}"
+  for w in "${vpn_words[@]}"; do
+    if [[ "$org" == *"$w"* ]] || [[ "$asn" == *"$w"* ]]; then
+      vpn_status="${RED}VPN veya Proxy kullanıyorsunuz!${RESET}"
+      break
+    fi
+  done
+
+  echo -e "${GREEN}${BOLD}IP BİLGİSİ:${RESET}"
+  echo -e "  IP             : $query_ip"
+  echo -e "  ISP / Organizasyon: $org"
+  echo -e "  ASN            : $asn"
+  echo -e "  Reverse DNS    : $reverse_dns"
+  echo -e "  VPN Durumu     : $vpn_status"
+  echo -e "  Ülke           : $country"
+  echo -e "  Bölge          : $region"
+  echo -e "  Şehir          : $city"
+  echo -e "  İlçe           : $district"
+  echo -e "  Posta Kodu     : $zip"
+  echo -e "  Koordinat      : $lat, $lon"
+  echo -e "  Harita         : https://maps.google.com/?q=$lat,$lon"
+  echo ""
+
+  # Basit port taraması (1-1024 arası, sadece açık/kapalı bilgisi)
+  echo -e "${CYAN}Port taraması başlatılıyor (1-1024)... Sabırlı olun!${RESET}"
+  open_ports=()
+  for port in {1..1024}; do
+    timeout 1 bash -c "echo > /dev/tcp/$ip/$port" &>/dev/null && open_ports+=($port)
+  done
+
+  if [ ${#open_ports[@]} -eq 0 ]; then
+    echo -e "${RED}Açık port bulunamadı.${RESET}"
+  else
+    echo -e "${GREEN}Açık portlar:${RESET} ${open_ports[*]}"
+  fi
+  echo ""
 }
 
 # IP-Tracer fonksiyonu
@@ -37,7 +111,7 @@ function ip_tracer() {
   echo ""
 
   while true; do
-    read -p $'\033[33m🔍 IP adresi ya da komut (GTX-M / GTX-MN / q çıkış): \033[0m' girdi
+    read -rp $'\033[33m🔍 IP adresi ya da komut (GTX-M / GTX-MN / q çıkış): \033[0m' girdi
 
     if [[ "$girdi" == "q" ]]; then
       break
@@ -59,55 +133,6 @@ function ip_tracer() {
       echo -e "${RED}[!] Geçersiz giriş. Lütfen geçerli bir IP ya da komut girin.${RESET}"
     fi
   done
-}
-
-# IP bilgisi gösterme fonksiyonu
-function bilgi_goster() {
-  ip="$1"
-  echo -e "${YELLOW}[!] Bilgiler alınıyor... Lütfen bekleyin.${RESET}"
-
-  data=$(curl -s "http://ip-api.com/json/$ip?fields=status,country,regionName,city,district,zip,lat,lon,org,query,message")
-
-  status=$(echo "$data" | jq -r '.status')
-
-  if [[ "$status" != "success" ]]; then
-    message=$(echo "$data" | jq -r '.message')
-    echo -e "${RED}[!] Hata: $message${RESET}"
-    return
-  fi
-
-  country=$(echo "$data" | jq -r '.country')
-  region=$(echo "$data" | jq -r '.regionName')
-  city=$(echo "$data" | jq -r '.city')
-  district=$(echo "$data" | jq -r '.district')
-  zip=$(echo "$data" | jq -r '.zip')
-  lat=$(echo "$data" | jq -r '.lat')
-  lon=$(echo "$data" | jq -r '.lon')
-  org=$(echo "$data" | jq -r '.org')
-  query_ip=$(echo "$data" | jq -r '.query')
-
-  [[ "$district" == "null" ]] && district="Bilinmiyor"
-  [[ "$zip" == "null" ]] && zip="Bilinmiyor"
-
-  # VPN kontrol (org içinde VPN, Proxy kelimeleri var mı)
-  if [[ "$org" =~ (VPN|Proxy|proxy|vpn) ]]; then
-    vpn_status="${RED}VPN veya Proxy kullanıyorsunuz!${RESET}"
-  else
-    vpn_status="${GREEN}VPN kullanmıyorsunuz.${RESET}"
-  fi
-
-  echo -e "${GREEN}IP BİLGİSİ:"
-  echo -e "  IP        : $query_ip"
-  echo -e "  ISP       : $org"
-  echo -e "  VPN Durumu: $vpn_status"
-  echo -e "  Ülke      : $country"
-  echo -e "  Bölge     : $region"
-  echo -e "  Şehir     : $city"
-  echo -e "  İlçe      : $district"
-  echo -e "  Posta Kodu: $zip"
-  echo -e "  Koordinat : $lat, $lon"
-  echo -e "  Harita    : https://maps.google.com/?q=$lat,$lon"
-  echo ""
 }
 
 # Usercan fonksiyonu
@@ -148,7 +173,7 @@ function usercan() {
   )
 
   while true; do
-    read -p "🔍 Sorgulamak istediğiniz kullanıcı adı ya da komut (GTX-MN): " kullanici
+    read -rp "🔍 Sorgulamak istediğiniz kullanıcı adı ya da komut (GTX-MN): " kullanici
 
     if [[ "$kullanici" == "GTX-MN" ]]; then
       kullanici_kilavuzu
@@ -176,7 +201,7 @@ function usercan() {
     echo ""
     echo -e "\033[36mGTX USERSCAN tarama tamamlandı.\033[0m"
 
-    read -p "🔄 Tekrar arama yapmak ister misin? (e/h): " cevap
+    read -rp "🔄 Tekrar arama yapmak ister misin? (e/h): " cevap
     case "$cevap" in
       [eE]) continue ;;
       *) echo "Çıkış yapılıyor."; break ;;
@@ -184,26 +209,37 @@ function usercan() {
   done
 }
 
-# X-OSINT fonksiyonu
+# X-OSINT fonksiyonu (gelişmiş)
 function x_osint() {
   clear
   figlet "GTX X-OSINT" | lolcat
-  echo -e "${YELLOW}Basit OSINT aracı - domain ve IP bilgisi toplama${RESET}"
+  echo -e "${YELLOW}Gelişmiş OSINT Aracı - Domain/IP Bilgisi Toplama${RESET}"
   echo ""
 
   while true; do
-    read -p "Domain veya IP adresi gir (q ile çık): " target
+    read -rp "Domain veya IP adresi gir (q ile çık): " target
     if [[ "$target" == "q" ]]; then
       break
     fi
 
-    echo -e "${CYAN}Whois bilgileri:${RESET}"
-    whois $target | head -40
+    # Whois bilgileri
+    echo -e "${MAGENTA}${BOLD}Whois bilgileri (ilk 40 satır):${RESET}"
+    whois $target 2>/dev/null | head -40
 
-    echo -e "\n${CYAN}Traceroute (ilk 10 hop):${RESET}"
-    traceroute -m 10 $target
+    echo -e "\n${CYAN}${BOLD}Traceroute (ilk 10 hop):${RESET}"
+    traceroute -m 10 $target 2>/dev/null | head -15
 
-    echo -e "\n${CYAN}DNS sorgusu:${RESET}"
+    echo -e "\n${YELLOW}${BOLD}DNS Kayıtları:${RESET}"
+    echo -e "${GREEN}A Kayıtları:${RESET}"
+    dig +short A $target
+    echo -e "${GREEN}MX Kayıtları:${RESET}"
+    dig +short MX $target
+    echo -e "${GREEN}NS Kayıtları:${RESET}"
+    dig +short NS $target
+    echo -e "${GREEN}TXT Kayıtları:${RESET}"
+    dig +short TXT $target
+
+    echo -e "\n${CYAN}${BOLD}Nslookup sonucu:${RESET}"
     nslookup $target
 
     pause
@@ -216,16 +252,16 @@ function menu() {
     banner
     echo -e "${GREEN}1) IP-Tracer (VPN kontrol dahil)"
     echo "2) Usercan (Sosyal medya kullanıcı adı arama)"
-    echo "3) X-OSINT (Domain/IP bilgileri)"
+    echo "3) X-OSINT (Gelişmiş Domain/IP bilgileri)"
     echo "4) Çıkış"
     echo -n -e "${CYAN}Seçiminiz: ${RESET}"
-    read secim
+    read -r secim
 
     case $secim in
       1) ip_tracer ;;
       2) usercan ;;
       3) x_osint ;;
-      4) echo "Çıkış yapılıyor..."; exit 0 ;;
+      4) echo -e "${YELLOW}Çıkış yapılıyor...${RESET}"; exit 0 ;;
       *) echo -e "${RED}Geçersiz seçim! Tekrar deneyin.${RESET}"; sleep 1 ;;
     esac
   done
@@ -233,3 +269,4 @@ function menu() {
 
 # Program başlat
 menu
+``
