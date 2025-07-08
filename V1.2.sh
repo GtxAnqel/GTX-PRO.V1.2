@@ -204,27 +204,7 @@ function x_osint() {
   done
 }
 
-### --- ADMIN PANEL FINDER ---
 
-function admin_finder() {
-  read -rp "Hedef site (http:// veya https://): " site
-  [[ -z "$site" ]] && { echo -e "${RED}Site boş olamaz.${RESET}"; pause; return; }
-
-  # URL sonunda / varsa temizle
-  site="${site%/}"
-
-  paneller=(
-    "admin"
-    "admin/login"
-    "admin.php"
-    "admin/index.php"
-    "panel"
-    "cpanel"
-    "wp-admin"
-    "login"
-    "user"
-    "dashboard"
-  )
 
   echo ""
 
@@ -240,7 +220,41 @@ function admin_finder() {
   echo ""
   pause
 }
+function admin_finder() {
+  read -rp "Hedef site (http:// veya https://): " site
+  [[ -z "$site" ]] && { echo -e "${RED}Site boş olamaz.${RESET}"; pause; return; }
 
+  site="${site%/}"
+  domain=$(echo "$site" | awk -F/ '{print $1"//"$3}')
+
+  paneller=(
+    "admin"
+    "admin/login"
+    "admin.php"
+    "admin/index.php"
+    "panel"
+    "cpanel"
+    "wp-admin"
+    "login"
+    "user"
+    "dashboard"
+  )
+
+  echo ""
+  echo -e "${YELLOW}Admin paneller $domain altında aranıyor...${RESET}\n"
+
+  for yol in "${paneller[@]}"; do
+    tam_url="${domain}/${yol}"
+    kod=$(curl -s -o /dev/null -w "%{http_code}" -A "Mozilla/5.0 (compatible; GTX-PRO/3.0)" "$tam_url")
+    if [[ "$kod" == "200" ]]; then
+      echo -e "${GREEN}[✓] Panel bulundu: $tam_url${RESET}"
+    else
+      echo -e "${RED}[✗] Bulunamadı: $tam_url${RESET}"
+    fi
+  done
+  echo ""
+  pause
+}
 ### --- EXPLOIT SCANNER ---
 
 function exploit_scanner() {
