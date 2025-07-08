@@ -204,22 +204,8 @@ function x_osint() {
   done
 }
 
+### --- ADMIN PANEL FINDER ---
 
-
-  echo ""
-
-  for yol in "${paneller[@]}"; do
-    tam_url="${site}/${yol}"
-    kod=$(curl -s -o /dev/null -w "%{http_code}" -A "Mozilla/5.0 (compatible; GTX-PRO/3.0)" "$tam_url")
-    if [[ "$kod" == "200" ]]; then
-      echo -e "${GREEN}[✓] Panel bulundu: $tam_url${RESET}"
-    else
-      echo -e "${RED}[✗] Bulunamadı: $tam_url${RESET}"
-    fi
-  done
-  echo ""
-  pause
-}
 function admin_finder() {
   read -rp "Hedef site (http:// veya https://): " site
   [[ -z "$site" ]] && { echo -e "${RED}Site boş olamaz.${RESET}"; pause; return; }
@@ -255,6 +241,7 @@ function admin_finder() {
   echo ""
   pause
 }
+
 ### --- EXPLOIT SCANNER ---
 
 function exploit_scanner() {
